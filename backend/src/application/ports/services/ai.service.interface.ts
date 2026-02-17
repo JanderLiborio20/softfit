@@ -37,4 +37,11 @@ export interface IAIService {
    * @returns Análise nutricional da imagem
    */
   analyzeFoodImageBase64(base64Image: string, mimeType: string): Promise<FoodAnalysisResult>;
+
+  /**
+   * Analisa uma descrição textual de alimentos e retorna informações nutricionais
+   * @param description Descrição textual dos alimentos (ex: "100g de arroz, 2 ovos e frango grelhado")
+   * @returns Análise nutricional dos alimentos descritos
+   */
+  analyzeFoodDescription(description: string): Promise<FoodAnalysisResult>;
 }

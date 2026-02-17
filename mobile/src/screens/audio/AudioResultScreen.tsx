@@ -7,27 +7,36 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../../App';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'AudioResult'>;
+  route: RouteProp<RootStackParamList, 'AudioResult'>;
 };
 
-const MOCK_RESULT = {
-  name: 'Almoço Fitness',
-  totalKcal: 485,
-  protein: 42,
-  carbs: 38,
-  fat: 15,
-  items: [
-    { name: 'Frango grelhado', amount: '125g', kcal: 195, protein: 32, carbs: 0, fat: 7 },
-    { name: 'Arroz integral', amount: '100g', kcal: 130, protein: 3, carbs: 28, fat: 1 },
-    { name: 'Ovo cozido', amount: '2 un', kcal: 65, protein: 1, carbs: 2, fat: 6.5 },
-    { name: 'Feijão', amount: '150g', kcal: 95, protein: 6, carbs: 8, fat: 0.5 },
-  ],
-};
+export default function AudioResultScreen({ navigation, route }: Props) {
+  const { analysis } = route.params;
 
-export default function AudioResultScreen({ navigation }: Props) {
+  const result = {
+    name: analysis.suggestedName,
+    totalKcal: analysis.estimatedCalories,
+    protein: analysis.estimatedMacros.proteinGrams,
+    carbs: analysis.estimatedMacros.carbsGrams,
+    fat: analysis.estimatedMacros.fatGrams,
+    items: analysis.identifiedFoods.map((food) => {
+      const count = analysis.identifiedFoods.length || 1;
+      return {
+        name: food,
+        amount: '',
+        kcal: Math.round(analysis.estimatedCalories / count),
+        protein: Math.round(analysis.estimatedMacros.proteinGrams / count),
+        carbs: Math.round(analysis.estimatedMacros.carbsGrams / count),
+        fat: Math.round(analysis.estimatedMacros.fatGrams / count),
+      };
+    }),
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
@@ -38,7 +47,7 @@ export default function AudioResultScreen({ navigation }: Props) {
         >
           <Text style={styles.closeIcon}>{'✕'}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Enviar Áudio</Text>
+        <Text style={styles.headerTitle}>Resultado</Text>
         <View style={styles.headerButton} />
       </View>
 
@@ -53,9 +62,9 @@ export default function AudioResultScreen({ navigation }: Props) {
               <Text style={styles.mealIcon}>{'🍽'}</Text>
             </View>
             <View style={styles.mealNameCol}>
-              <Text style={styles.mealName}>{MOCK_RESULT.name}</Text>
+              <Text style={styles.mealName}>{result.name}</Text>
               <Text style={styles.mealKcal}>
-                {MOCK_RESULT.totalKcal} kcal
+                {result.totalKcal} kcal
               </Text>
             </View>
           </View>
@@ -64,17 +73,17 @@ export default function AudioResultScreen({ navigation }: Props) {
           <View style={styles.macroRow}>
             <View style={styles.macroItem}>
               <View style={[styles.macroDot, { backgroundColor: '#ef4444' }]} />
-              <Text style={styles.macroValue}>{MOCK_RESULT.protein}g</Text>
+              <Text style={styles.macroValue}>{result.protein}g</Text>
               <Text style={styles.macroLabel}>Proteína</Text>
             </View>
             <View style={styles.macroItem}>
               <View style={[styles.macroDot, { backgroundColor: '#f97316' }]} />
-              <Text style={styles.macroValue}>{MOCK_RESULT.carbs}g</Text>
+              <Text style={styles.macroValue}>{result.carbs}g</Text>
               <Text style={styles.macroLabel}>Carbos</Text>
             </View>
             <View style={styles.macroItem}>
               <View style={[styles.macroDot, { backgroundColor: '#eab308' }]} />
-              <Text style={styles.macroValue}>{MOCK_RESULT.fat}g</Text>
+              <Text style={styles.macroValue}>{result.fat}g</Text>
               <Text style={styles.macroLabel}>Gordura</Text>
             </View>
           </View>
@@ -86,18 +95,9 @@ export default function AudioResultScreen({ navigation }: Props) {
         {/* Items list */}
         <Text style={styles.itemsTitle}>Alimentos identificados</Text>
         <View style={styles.itemsList}>
-          {MOCK_RESULT.items.map((item, index) => (
+          {result.items.map((item, index) => (
             <View key={index} style={styles.itemRow}>
-              <View style={styles.itemLeft}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemAmount}>{item.amount}</Text>
-              </View>
-              <View style={styles.itemRight}>
-                <Text style={styles.itemKcal}>{item.kcal} kcal</Text>
-                <Text style={styles.itemMacros}>
-                  P:{item.protein}g · C:{item.carbs}g · G:{item.fat}g
-                </Text>
-              </View>
+              <Text style={styles.itemName}>{item.name}</Text>
             </View>
           ))}
         </View>
@@ -110,18 +110,16 @@ export default function AudioResultScreen({ navigation }: Props) {
           onPress={() => navigation.popToTop()}
           activeOpacity={0.7}
         >
-          <Text style={styles.retakeText}>Gravar outro</Text>
+          <Text style={styles.retakeText}>Descrever outro</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.saveButton}
           onPress={() =>
-            navigation.navigate('MealDetail', {
-              meal: MOCK_RESULT,
-            })
+            navigation.navigate('MealDetail', { meal: result })
           }
           activeOpacity={0.8}
         >
-          <Text style={styles.saveText}>Salvar refeição</Text>
+          <Text style={styles.saveText}>Ver detalhes</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -232,42 +230,18 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   itemsList: {
-    gap: 12,
+    gap: 10,
   },
   itemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     backgroundColor: '#f9fafb',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
-  itemLeft: {
-    flex: 1,
-  },
   itemName: {
     fontSize: 15,
     fontWeight: '600',
     color: '#18181b',
-  },
-  itemAmount: {
-    fontSize: 13,
-    color: '#71717a',
-    marginTop: 2,
-  },
-  itemRight: {
-    alignItems: 'flex-end',
-  },
-  itemKcal: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#18181b',
-  },
-  itemMacros: {
-    fontSize: 11,
-    color: '#a1a1aa',
-    marginTop: 2,
   },
   bottomActions: {
     flexDirection: 'row',

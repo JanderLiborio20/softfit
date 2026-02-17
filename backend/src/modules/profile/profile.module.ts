@@ -6,6 +6,7 @@ import { TypeORMClientProfileRepository } from '@infrastructure/database/typeorm
 import { CLIENT_PROFILE_REPOSITORY_TOKEN } from '@application/ports/repositories';
 import { CompleteOnboardingUseCase } from '@application/use-cases/profile/complete-onboarding.usecase';
 import { GetProfileUseCase } from '@application/use-cases/profile/get-profile.usecase';
+import { UpdateProfileUseCase } from '@application/use-cases/profile/update-profile.usecase';
 
 @Module({
   imports: [TypeOrmModule.forFeature([ClientProfileSchema])],
@@ -13,6 +14,7 @@ import { GetProfileUseCase } from '@application/use-cases/profile/get-profile.us
   providers: [
     CompleteOnboardingUseCase,
     GetProfileUseCase,
+    UpdateProfileUseCase,
     {
       provide: CLIENT_PROFILE_REPOSITORY_TOKEN,
       useClass: TypeORMClientProfileRepository,

@@ -33,10 +33,12 @@ export class TypeORMMealRepository implements IMealRepository {
   }
 
   async findByUserIdAndDate(userId: string, date: Date): Promise<Meal[]> {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Use UTC components to avoid timezone shift when parsing "YYYY-MM-DD" strings
+    const y = date.getUTCFullYear();
+    const m = date.getUTCMonth();
+    const d = date.getUTCDate();
+    const startOfDay = new Date(y, m, d, 0, 0, 0, 0);
+    const endOfDay = new Date(y, m, d, 23, 59, 59, 999);
 
     const schemas = await this.repository.find({
       where: {

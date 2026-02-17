@@ -24,6 +24,11 @@ import MealDetailScreen from './src/screens/photo/MealDetailScreen';
 import AudioRecordScreen from './src/screens/audio/AudioRecordScreen';
 import AudioAnalyzingScreen from './src/screens/audio/AudioAnalyzingScreen';
 import AudioResultScreen from './src/screens/audio/AudioResultScreen';
+import NutritionistHomeScreen from './src/screens/nutritionist/NutritionistHomeScreen';
+import SearchClientScreen from './src/screens/nutritionist/SearchClientScreen';
+import ClientDetailScreen from './src/screens/nutritionist/ClientDetailScreen';
+import PendingRequestsScreen from './src/screens/PendingRequestsScreen';
+import NutritionistRegisterScreen from './src/screens/nutritionist/NutritionistRegisterScreen';
 
 export type OnboardingData = {
   goal?: string;
@@ -75,8 +80,8 @@ export type RootStackParamList = {
   PhotoResult: { photoUri: string; analysis: AnalysisResult };
   MealDetail: { meal: MealData };
   AudioRecord: undefined;
-  AudioAnalyzing: undefined;
-  AudioResult: undefined;
+  AudioAnalyzing: { description: string };
+  AudioResult: { analysis: AnalysisResult };
   OnboardingGoal: undefined;
   OnboardingGender: { data: OnboardingData };
   OnboardingBirthDate: { data: OnboardingData };
@@ -85,6 +90,11 @@ export type RootStackParamList = {
   OnboardingActivity: { data: OnboardingData };
   OnboardingCreateAccount: { data: OnboardingData };
   OnboardingSuccess: undefined;
+  NutritionistHome: undefined;
+  SearchClient: undefined;
+  ClientDetail: { clientId: string; clientName: string };
+  PendingRequests: undefined;
+  NutritionistRegister: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -145,6 +155,15 @@ export default function App() {
               component={SuccessScreen}
               options={{ gestureEnabled: false }}
             />
+            <Stack.Screen
+              name="NutritionistHome"
+              component={NutritionistHomeScreen}
+              options={{ gestureEnabled: false }}
+            />
+            <Stack.Screen name="SearchClient" component={SearchClientScreen} />
+            <Stack.Screen name="ClientDetail" component={ClientDetailScreen} />
+            <Stack.Screen name="PendingRequests" component={PendingRequestsScreen} />
+            <Stack.Screen name="NutritionistRegister" component={NutritionistRegisterScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

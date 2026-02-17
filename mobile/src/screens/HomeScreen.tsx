@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import CaloriesChart from '../components/CaloriesChart';
@@ -16,6 +17,7 @@ import MealCard from '../components/MealCard';
 import { useAuth } from '../contexts/AuthContext';
 import { getProfile } from '../services/profile';
 import { getMealsByDate } from '../services/meals';
+import { getPendingLinks } from '../services/nutritionist';
 import type { ProfileResponse } from '../services/profile';
 import type { MealListResponse } from '../services/meals';
 
@@ -72,6 +74,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [mealsData, setMealsData] = useState<MealListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const goals = profile
     ? {
@@ -94,12 +97,14 @@ export default function HomeScreen({ navigation }: Props) {
   const loadData = useCallback(async (date: Date) => {
     setLoading(true);
     try {
-      const [profileRes, mealsRes] = await Promise.all([
+      const [profileRes, mealsRes, pending] = await Promise.all([
         getProfile().catch(() => null),
         getMealsByDate(toDateString(date)),
+        getPendingLinks().catch(() => []),
       ]);
       if (profileRes) setProfile(profileRes);
       setMealsData(mealsRes);
+      setPendingCount(pending.length);
     } catch {
       // silently fail, show defaults
     } finally {
@@ -107,9 +112,11 @@ export default function HomeScreen({ navigation }: Props) {
     }
   }, []);
 
-  useEffect(() => {
-    loadData(selectedDate);
-  }, [selectedDate, loadData]);
+  useFocusEffect(
+    useCallback(() => {
+      loadData(selectedDate);
+    }, [selectedDate, loadData]),
+  );
 
   function navigateDate(direction: -1 | 1) {
     setSelectedDate((prev) => {
@@ -140,13 +147,26 @@ export default function HomeScreen({ navigation }: Props) {
             <Text style={styles.userName}>{userName}</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.metasButton}
-          onPress={() => navigation.navigate('Metas')}
-        >
-          <Text style={styles.metasIcon}>⚙</Text>
-          <Text style={styles.metasText}>Metas</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          {pendingCount > 0 && (
+            <TouchableOpacity
+              style={styles.pendingButton}
+              onPress={() => navigation.navigate('PendingRequests')}
+            >
+              <View style={styles.pendingBadge}>
+                <Text style={styles.pendingBadgeText}>{pendingCount}</Text>
+              </View>
+              <Text style={styles.pendingText}>Pendentes</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.metasButton}
+            onPress={() => navigation.navigate('Metas')}
+          >
+            <Text style={styles.metasIcon}>⚙</Text>
+            <Text style={styles.metasText}>Metas</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -186,19 +206,22 @@ export default function HomeScreen({ navigation }: Props) {
             <View style={styles.macrosSummary}>
               <View style={styles.macroSummaryItem}>
                 <Text style={styles.macroSummaryValue}>
-                  {totals.protein} / {goals.protein}g
+                  <Text style={{ color: '#22c55e', fontWeight: '700' }}>{Math.round(totals.protein)}</Text>
+                  <Text style={{ color: '#a1a1aa' }}> / {goals.protein}g</Text>
                 </Text>
                 <Text style={styles.macroSummaryLabel}>Proteínas</Text>
               </View>
               <View style={styles.macroSummaryItem}>
                 <Text style={styles.macroSummaryValue}>
-                  {totals.carbs} / {goals.carbs}g
+                  <Text style={{ color: '#14b8a6', fontWeight: '700' }}>{Math.round(totals.carbs)}</Text>
+                  <Text style={{ color: '#a1a1aa' }}> / {goals.carbs}g</Text>
                 </Text>
                 <Text style={styles.macroSummaryLabel}>Carboidratos</Text>
               </View>
               <View style={styles.macroSummaryItem}>
                 <Text style={styles.macroSummaryValue}>
-                  {totals.fat} / {goals.fat}g
+                  <Text style={{ color: '#eab308', fontWeight: '700' }}>{Math.round(totals.fat)}</Text>
+                  <Text style={{ color: '#a1a1aa' }}> / {goals.fat}g</Text>
                 </Text>
                 <Text style={styles.macroSummaryLabel}>Gorduras</Text>
               </View>
@@ -230,23 +253,25 @@ export default function HomeScreen({ navigation }: Props) {
                 </View>
               )}
 
-              {/* Add meal buttons */}
-              <View style={styles.addMealButtons}>
-                <TouchableOpacity
-                  style={styles.addMealButton}
-                  onPress={() => navigation.navigate('AudioRecord')}
-                >
-                  <Text style={styles.addMealIcon}>🎙</Text>
-                  <Text style={styles.addMealLabel}>Áudio</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.addMealButton}
-                  onPress={() => navigation.navigate('PhotoTake')}
-                >
-                  <Text style={styles.addMealIcon}>📷</Text>
-                  <Text style={styles.addMealLabel}>Foto</Text>
-                </TouchableOpacity>
-              </View>
+              {/* Add meal buttons - only show when no meals */}
+              {meals.length === 0 && (
+                <View style={styles.addMealButtons}>
+                  <TouchableOpacity
+                    style={styles.addMealButton}
+                    onPress={() => navigation.navigate('AudioRecord')}
+                  >
+                    <Text style={styles.addMealIcon}>📝</Text>
+                    <Text style={styles.addMealLabel}>Descrever</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.addMealButton}
+                    onPress={() => navigation.navigate('PhotoTake')}
+                  >
+                    <Text style={styles.addMealIcon}>📷</Text>
+                    <Text style={styles.addMealLabel}>Foto</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           </>
         )}
@@ -286,8 +311,8 @@ export default function HomeScreen({ navigation }: Props) {
                   navigation.navigate('AudioRecord');
                 }}
               >
-                <Text style={styles.bottomSheetButtonIcon}>🎙</Text>
-                <Text style={styles.bottomSheetButtonLabel}>Áudio</Text>
+                <Text style={styles.bottomSheetButtonIcon}>📝</Text>
+                <Text style={styles.bottomSheetButtonLabel}>Descrever</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.bottomSheetButton}
@@ -345,6 +370,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#18181b',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  pendingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#7c3aed',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  pendingBadge: {
+    backgroundColor: '#ffffff',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pendingBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#7c3aed',
+  },
+  pendingText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ffffff',
   },
   metasButton: {
     flexDirection: 'row',

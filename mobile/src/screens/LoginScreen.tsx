@@ -15,6 +15,7 @@ import {
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { useAuth } from '../contexts/AuthContext';
+import { getStoredUser } from '../services/auth';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
@@ -35,7 +36,9 @@ export default function LoginScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await signIn(email.trim(), senha);
-      navigation.replace('Home');
+      const stored = await getStoredUser();
+      const dest = stored?.role === 'nutritionist' ? 'NutritionistHome' : 'Home';
+      navigation.replace(dest);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao fazer login';
       Alert.alert('Erro', message);
@@ -117,7 +120,7 @@ export default function LoginScreen({ navigation }: Props) {
             <TouchableOpacity
               style={styles.nutritionistButton}
               activeOpacity={0.7}
-              onPress={() => {/* TODO: navegar para login nutricionista */}}
+              onPress={() => navigation.navigate('NutritionistRegister')}
             >
               <Text style={styles.nutritionistButtonText}>
                 Sou nutricionista
@@ -221,6 +224,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
+    marginTop: 16,
   },
   nutritionistButtonText: {
     fontSize: 15,

@@ -9,6 +9,13 @@ type Props = {
   fat: { current: number; total: number };
 };
 
+const COLORS = {
+  protein: '#22c55e',
+  carbs: '#14b8a6',
+  fat: '#eab308',
+  bg: '#e5e7eb',
+};
+
 export default function CaloriesChart({
   current,
   total,
@@ -16,139 +23,79 @@ export default function CaloriesChart({
   carbs,
   fat,
 }: Props) {
-  const size = 180;
+  const width = 260;
   const strokeWidth = 14;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
+  const gap = 20;
 
-  const progress = Math.min(current / total, 1);
-  const proteinProgress = Math.min(protein.current / protein.total, 1);
-  const carbsProgress = Math.min(carbs.current / carbs.total, 1);
-  const fatProgress = Math.min(fat.current / fat.total, 1);
+  const outerR = width / 2 - strokeWidth / 2;
+  const middleR = outerR - gap;
+  const innerR = middleR - gap;
 
-  // Outer ring = calories total
-  const calorieOffset = circumference * (1 - progress);
+  const height = outerR + strokeWidth + 10;
+  const cy = outerR + strokeWidth / 2;
 
-  // Inner rings for macros
-  const innerRadius1 = radius - 18;
-  const innerCircumference1 = 2 * Math.PI * innerRadius1;
-  const proteinOffset = innerCircumference1 * (1 - proteinProgress);
-
-  const innerRadius2 = radius - 36;
-  const innerCircumference2 = 2 * Math.PI * innerRadius2;
-  const carbsOffset = innerCircumference2 * (1 - carbsProgress);
-
-  const innerRadius3 = radius - 54;
-  const innerCircumference3 = 2 * Math.PI * innerRadius3;
-  const fatOffset = innerCircumference3 * (1 - fatProgress);
+  const proteinProg = protein.total > 0 ? Math.min(protein.current / protein.total, 1) : 0;
+  const carbsProg = carbs.total > 0 ? Math.min(carbs.current / carbs.total, 1) : 0;
+  const fatProg = fat.total > 0 ? Math.min(fat.current / fat.total, 1) : 0;
 
   return (
     <View style={styles.container}>
-      <Svg width={size} height={size}>
-        {/* Background rings */}
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="#e5e5e5"
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={innerRadius1}
-          stroke="#e5e5e5"
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={innerRadius2}
-          stroke="#e5e5e5"
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={innerRadius3}
-          stroke="#e5e5e5"
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
+      <Svg width={width} height={height}>
+        {/* Background arcs */}
+        <SemiArc cx={width / 2} cy={cy} r={outerR} color={COLORS.bg} sw={strokeWidth} progress={1} />
+        <SemiArc cx={width / 2} cy={cy} r={middleR} color={COLORS.bg} sw={strokeWidth} progress={1} />
+        <SemiArc cx={width / 2} cy={cy} r={innerR} color={COLORS.bg} sw={strokeWidth} progress={1} />
 
-        {/* Calories (outer - red/orange) */}
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="#ef4444"
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={circumference}
-          strokeDashoffset={calorieOffset}
-          strokeLinecap="round"
-          rotation="-90"
-          origin={`${size / 2}, ${size / 2}`}
-        />
-
-        {/* Protein (green) */}
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={innerRadius1}
-          stroke="#22c55e"
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={innerCircumference1}
-          strokeDashoffset={proteinOffset}
-          strokeLinecap="round"
-          rotation="-90"
-          origin={`${size / 2}, ${size / 2}`}
-        />
-
-        {/* Carbs (orange) */}
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={innerRadius2}
-          stroke="#f97316"
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={innerCircumference2}
-          strokeDashoffset={carbsOffset}
-          strokeLinecap="round"
-          rotation="-90"
-          origin={`${size / 2}, ${size / 2}`}
-        />
-
-        {/* Fat (yellow) */}
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={innerRadius3}
-          stroke="#eab308"
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={innerCircumference3}
-          strokeDashoffset={fatOffset}
-          strokeLinecap="round"
-          rotation="-90"
-          origin={`${size / 2}, ${size / 2}`}
-        />
+        {/* Progress arcs */}
+        <SemiArc cx={width / 2} cy={cy} r={outerR} color={COLORS.protein} sw={strokeWidth} progress={proteinProg} />
+        <SemiArc cx={width / 2} cy={cy} r={middleR} color={COLORS.carbs} sw={strokeWidth} progress={carbsProg} />
+        <SemiArc cx={width / 2} cy={cy} r={innerR} color={COLORS.fat} sw={strokeWidth} progress={fatProg} />
       </Svg>
 
-      {/* Center text */}
-      <View style={styles.centerText}>
-        <Text style={styles.currentCalories}>
-          <Text style={styles.currentValue}>{current}</Text>
+      {/* Center text (calories) */}
+      <View style={[styles.centerText, { top: cy - 20 }]}>
+        <Text style={styles.caloriesRow}>
+          <Text style={styles.currentValue}>{Math.round(current)}</Text>
           <Text style={styles.totalValue}> / {total}</Text>
         </Text>
         <Text style={styles.caloriesLabel}>Calorias</Text>
       </View>
     </View>
+  );
+}
+
+function SemiArc({
+  cx,
+  cy,
+  r,
+  color,
+  sw,
+  progress,
+}: {
+  cx: number;
+  cy: number;
+  r: number;
+  color: string;
+  sw: number;
+  progress: number;
+}) {
+  const halfCirc = Math.PI * r;
+  const fullCirc = 2 * Math.PI * r;
+  const visible = halfCirc * progress;
+
+  return (
+    <Circle
+      cx={cx}
+      cy={cy}
+      r={r}
+      stroke={color}
+      strokeWidth={sw}
+      fill="none"
+      strokeDasharray={`${visible} ${fullCirc}`}
+      strokeLinecap="round"
+      rotation="180"
+      origin={`${cx}, ${cy}`}
+    />
   );
 }
 
@@ -161,22 +108,22 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
   },
-  currentCalories: {
+  caloriesRow: {
     fontSize: 16,
   },
   currentValue: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '700',
     color: '#ef4444',
   },
   totalValue: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '400',
-    color: '#71717a',
+    color: '#a1a1aa',
   },
   caloriesLabel: {
-    fontSize: 12,
-    color: '#71717a',
+    fontSize: 13,
+    color: '#a1a1aa',
     marginTop: 2,
   },
 });

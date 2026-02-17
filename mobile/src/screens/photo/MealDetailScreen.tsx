@@ -109,6 +109,7 @@ export default function MealDetailScreen({ navigation, route }: Props) {
           proteinGrams: meal.protein,
           fatGrams: meal.fat,
         },
+        mealTime: new Date().toISOString(),
       });
       navigation.navigate('Home');
     } catch (error) {

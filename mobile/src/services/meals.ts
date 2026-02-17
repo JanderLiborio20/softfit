@@ -78,6 +78,13 @@ export async function analyzeMealPhoto(photoUri: string): Promise<AIAnalysisResp
   return data as AIAnalysisResponse;
 }
 
+export async function describeMeal(description: string): Promise<AIAnalysisResponse> {
+  return apiFetch<AIAnalysisResponse>('/meals/describe', {
+    method: 'POST',
+    body: JSON.stringify({ description }),
+  });
+}
+
 export async function confirmMeal(data: {
   name: string;
   foods: string[];

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,21 +8,91 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
+import { useAuth } from '../contexts/AuthContext';
+import { getProfile, updateProfile } from '../services/profile';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Profile'>;
 };
 
 export default function ProfileScreen({ navigation }: Props) {
-  const [name, setName] = useState('Mateus Silva');
-  const [birthDate, setBirthDate] = useState('19/02/2000');
-  const [height, setHeight] = useState('175');
-  const [weight, setWeight] = useState('80');
+  const { user, signOut } = useAuth();
+  const [name, setName] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [height, setHeight] = useState('');
+  const [weight, setWeight] = useState('');
   const [gender, setGender] = useState<'male' | 'female'>('male');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  async function loadProfile() {
+    try {
+      const profile = await getProfile();
+      setName(user?.name || '');
+      if (profile.dateOfBirth) {
+        const dob = new Date(profile.dateOfBirth);
+        const day = String(dob.getUTCDate()).padStart(2, '0');
+        const month = String(dob.getUTCMonth() + 1).padStart(2, '0');
+        const year = dob.getUTCFullYear();
+        setBirthDate(`${day}/${month}/${year}`);
+      }
+      if (profile.heightCm) setHeight(String(profile.heightCm));
+      if (profile.weightKg) setWeight(String(profile.weightKg));
+      if (profile.gender) setGender(profile.gender as 'male' | 'female');
+    } catch {
+      // Profile may not exist yet - show empty form
+      setName(user?.name || '');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const parts = birthDate.split('/');
+      const isoDate = parts.length === 3
+        ? `${parts[2]}-${parts[1]}-${parts[0]}`
+        : undefined;
+
+      await updateProfile({
+        dateOfBirth: isoDate,
+        gender,
+        heightCm: Number(height),
+        weightKg: Number(weight),
+      });
+      navigation.goBack();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Erro ao salvar';
+      Alert.alert('Erro', msg);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleLogout() {
+    Alert.alert('Sair', 'Deseja sair da sua conta?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Sair',
+        style: 'destructive',
+        onPress: async () => {
+          await signOut();
+          navigation.reset({ index: 0, routes: [{ name: 'Launch' }] });
+        },
+      },
+    ]);
+  }
 
   const formatDate = (text: string) => {
     const numbers = text.replace(/\D/g, '');
@@ -32,6 +102,16 @@ export default function ProfileScreen({ navigation }: Props) {
     if (numbers.length > 4) formatted += '/' + numbers.slice(4, 8);
     setBirthDate(formatted);
   };
+
+  const initial = (name || 'U')[0].toUpperCase();
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]} edges={['top', 'bottom']}>
+        <ActivityIndicator size="large" color="#65a30d" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -48,7 +128,7 @@ export default function ProfileScreen({ navigation }: Props) {
             <Text style={styles.backArrow}>{'‹'}</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Perfil</Text>
-          <TouchableOpacity style={styles.headerButton}>
+          <TouchableOpacity style={styles.headerButton} onPress={handleLogout}>
             <Text style={styles.logoutIcon}>{'⎋'}</Text>
           </TouchableOpacity>
         </View>
@@ -62,7 +142,7 @@ export default function ProfileScreen({ navigation }: Props) {
           {/* Avatar */}
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>M</Text>
+              <Text style={styles.avatarText}>{initial}</Text>
             </View>
           </View>
 
@@ -73,10 +153,21 @@ export default function ProfileScreen({ navigation }: Props) {
               <Text style={styles.label}>Nome</Text>
               <View style={styles.inputWrapper}>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: '#71717a' }]}
                   value={name}
-                  onChangeText={setName}
-                  autoCapitalize="words"
+                  editable={false}
+                />
+              </View>
+            </View>
+
+            {/* Email */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>E-mail</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={[styles.input, { color: '#71717a' }]}
+                  value={user?.email || ''}
+                  editable={false}
                 />
               </View>
             </View>
@@ -163,14 +254,26 @@ export default function ProfileScreen({ navigation }: Props) {
           </View>
         </ScrollView>
 
-        {/* Save button */}
+        {/* Buttons */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={styles.saveButton}
+            style={[styles.saveButton, saving && { opacity: 0.5 }]}
             activeOpacity={0.8}
-            onPress={() => navigation.goBack()}
+            onPress={handleSave}
+            disabled={saving}
           >
-            <Text style={styles.saveButtonText}>Salvar</Text>
+            {saving ? (
+              <ActivityIndicator color="#18181b" />
+            ) : (
+              <Text style={styles.saveButtonText}>Salvar</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            activeOpacity={0.8}
+            onPress={handleLogout}
+          >
+            <Text style={styles.logoutButtonText}>Sair da conta</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -331,5 +434,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#18181b',
+  },
+  logoutButton: {
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutButtonText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#ef4444',
   },
 });

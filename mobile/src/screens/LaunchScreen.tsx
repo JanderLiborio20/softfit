@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   StyleSheet,
@@ -5,15 +6,39 @@ import {
   View,
   ImageBackground,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
+import { useAuth } from '../contexts/AuthContext';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Launch'>;
 };
 
 export default function LaunchScreen({ navigation }: Props) {
+  const { user, isLoading } = useAuth();
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (user) {
+        const dest = user.role === 'nutritionist' ? 'NutritionistHome' : 'Home';
+        navigation.reset({ index: 0, routes: [{ name: dest }] });
+      } else {
+        setChecked(true);
+      }
+    }
+  }, [isLoading, user]);
+
+  if (!checked) {
+    return (
+      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color="#bef264" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ImageBackground

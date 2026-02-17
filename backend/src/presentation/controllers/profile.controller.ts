@@ -22,6 +22,7 @@ import {
 } from '@application/dtos/profile';
 import { CompleteOnboardingUseCase } from '@application/use-cases/profile/complete-onboarding.usecase';
 import { GetProfileUseCase } from '@application/use-cases/profile/get-profile.usecase';
+import { UpdateProfileUseCase } from '@application/use-cases/profile/update-profile.usecase';
 
 @ApiTags('profile')
 @Controller('profile')
@@ -31,6 +32,7 @@ export class ProfileController {
   constructor(
     private readonly completeOnboardingUseCase: CompleteOnboardingUseCase,
     private readonly getProfileUseCase: GetProfileUseCase,
+    private readonly updateProfileUseCase: UpdateProfileUseCase,
   ) {}
 
   @Post('onboarding')
@@ -60,8 +62,7 @@ export class ProfileController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: UpdateProfileDto,
   ): Promise<ProfileResponseDto> {
-    // TODO: Implementar use case
-    throw new Error('Not implemented');
+    return this.updateProfileUseCase.execute(user.sub, dto);
   }
 
   @Put('goals')

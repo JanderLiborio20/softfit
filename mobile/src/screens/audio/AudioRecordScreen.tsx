@@ -1,15 +1,14 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
-  Animated,
-  Easing,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Audio } from 'expo-av';
-import Svg, { Circle } from 'react-native-svg';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../App';
 
@@ -17,141 +16,19 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'AudioRecord'>;
 };
 
-type RecordingState = 'idle' | 'recording' | 'done';
-
-function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60)
-    .toString()
-    .padStart(2, '0');
-  const secs = (seconds % 60).toString().padStart(2, '0');
-  return `${mins}:${secs}`;
-}
-
 export default function AudioRecordScreen({ navigation }: Props) {
-  const [state, setState] = useState<RecordingState>('idle');
-  const [duration, setDuration] = useState(0);
-  const recordingRef = useRef<Audio.Recording | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const ringAnim = useRef(new Animated.Value(0)).current;
+  const [description, setDescription] = useState('');
+  const inputRef = useRef<TextInput>(null);
 
-  const size = 220;
-  const strokeWidth = 10;
-  const center = size / 2;
-  const radius = center - strokeWidth;
-  const circumference = 2 * Math.PI * radius;
-
-  // Pulse animation during recording
-  useEffect(() => {
-    if (state === 'recording') {
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.05,
-            duration: 800,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 800,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ]),
-      );
-      pulse.start();
-      return () => pulse.stop();
-    } else {
-      pulseAnim.setValue(1);
-    }
-  }, [state, pulseAnim]);
-
-  // Ring progress animation
-  useEffect(() => {
-    if (state === 'recording') {
-      Animated.timing(ringAnim, {
-        toValue: 1,
-        duration: 60000, // 60s max
-        easing: Easing.linear,
-        useNativeDriver: false,
-      }).start();
-    } else if (state === 'idle') {
-      ringAnim.setValue(0);
-    }
-  }, [state, ringAnim]);
-
-  const startRecording = useCallback(async () => {
-    try {
-      const permission = await Audio.requestPermissionsAsync();
-      if (!permission.granted) return;
-
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
-      );
-      recordingRef.current = recording;
-      setState('recording');
-      setDuration(0);
-
-      timerRef.current = setInterval(() => {
-        setDuration((d) => d + 1);
-      }, 1000);
-    } catch {
-      // Permission denied or error
-    }
-  }, []);
-
-  const stopRecording = useCallback(async () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    if (recordingRef.current) {
-      try {
-        await recordingRef.current.stopAndUnloadAsync();
-      } catch {
-        // Already stopped
-      }
-      recordingRef.current = null;
-    }
-
-    setState('done');
-  }, []);
-
-  const handleSend = useCallback(() => {
-    navigation.navigate('AudioAnalyzing');
-  }, [navigation]);
-
-  const handleReset = useCallback(() => {
-    setState('idle');
-    setDuration(0);
-    ringAnim.setValue(0);
-  }, [ringAnim]);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (recordingRef.current) {
-        recordingRef.current.stopAndUnloadAsync().catch(() => {});
-      }
-    };
-  }, []);
-
-  const ringOffset = ringAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [circumference, 0],
-  });
+  function handleSend() {
+    const trimmed = description.trim();
+    if (!trimmed) return;
+    navigation.navigate('AudioAnalyzing', { description: trimmed });
+  }
 
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.headerButton}
@@ -159,139 +36,74 @@ export default function AudioRecordScreen({ navigation }: Props) {
           >
             <Text style={styles.closeIcon}>{'✕'}</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Enviar Áudio</Text>
+          <Text style={styles.headerTitle}>Descrever Refeição</Text>
           <View style={styles.headerButton} />
         </View>
       </SafeAreaView>
 
-      {/* Center content */}
-      <View style={styles.centerContent}>
-        {/* Animated ring */}
-        <Animated.View
-          style={[
-            styles.ringContainer,
-            { transform: [{ scale: pulseAnim }] },
-          ]}
-        >
-          <Svg width={size} height={size}>
-            {/* Background ring */}
-            <Circle
-              cx={center}
-              cy={center}
-              r={radius}
-              stroke="rgba(190, 242, 100, 0.1)"
-              strokeWidth={strokeWidth}
-              fill="none"
-            />
-            {/* Progress ring */}
-            <AnimatedCircle
-              cx={center}
-              cy={center}
-              r={radius}
-              stroke="#bef264"
-              strokeWidth={strokeWidth}
-              fill="none"
-              strokeDasharray={`${circumference}`}
-              strokeDashoffset={ringOffset}
-              strokeLinecap="round"
-              rotation="-90"
-              origin={`${center}, ${center}`}
-              opacity={state === 'idle' ? 0.3 : 1}
-            />
-          </Svg>
-
-          {/* Center text */}
-          <View style={styles.centerText}>
-            {state === 'idle' && (
-              <Text style={styles.exampleText}>
-                Tente dizer algo como:{'\n'}
-                <Text style={styles.exampleBold}>
-                  100g de Arroz, 2 Ovos e{'\n'}150g de frango
-                </Text>
-              </Text>
-            )}
-            {state === 'recording' && (
-              <>
-                <Text style={styles.exampleText}>
-                  Tente dizer algo como:{'\n'}
-                  <Text style={styles.exampleBold}>
-                    100g de Arroz, 2 Ovos e{'\n'}150g de frango
-                  </Text>
-                </Text>
-              </>
-            )}
-            {state === 'done' && (
-              <Text style={styles.doneText}>
-                Áudio gravado!{'\n'}Toque em enviar para analisar
-              </Text>
-            )}
+      <KeyboardAvoidingView
+        style={styles.content}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
+      >
+        <View style={styles.centerContent}>
+          <View style={styles.iconBadge}>
+            <Text style={styles.icon}>{'🍽'}</Text>
           </View>
-        </Animated.View>
 
-        {/* Timer */}
-        {(state === 'recording' || state === 'done') && (
-          <Text style={styles.timer}>{formatTime(duration)}</Text>
-        )}
-
-        {/* Hint text */}
-        {state === 'idle' && (
-          <Text style={styles.hintText}>
-            Clique no microfone{'\n'}para começar a gravar
+          <Text style={styles.title}>O que você comeu?</Text>
+          <Text style={styles.subtitle}>
+            Descreva os alimentos e quantidades que você consumiu
           </Text>
-        )}
-      </View>
 
-      {/* Bottom controls */}
-      <SafeAreaView style={styles.bottomArea} edges={['bottom']}>
-        <View style={styles.controls}>
-          {state === 'idle' && (
+          <View style={styles.inputContainer}>
+            <TextInput
+              ref={inputRef}
+              style={styles.input}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Ex: 100g de arroz, 2 ovos mexidos e 150g de frango grelhado"
+              placeholderTextColor="rgba(255,255,255,0.3)"
+              multiline
+              textAlignVertical="top"
+              autoFocus
+            />
+          </View>
+
+          <View style={styles.suggestions}>
+            <Text style={styles.suggestionsTitle}>Dicas:</Text>
+            <Text style={styles.suggestionItem}>
+              {'•'} Inclua quantidades quando possível (g, ml, unidades)
+            </Text>
+            <Text style={styles.suggestionItem}>
+              {'•'} Mencione o modo de preparo (grelhado, frito, cozido)
+            </Text>
+            <Text style={styles.suggestionItem}>
+              {'•'} Separe os alimentos por vírgula
+            </Text>
+          </View>
+        </View>
+
+        <SafeAreaView style={styles.bottomArea} edges={['bottom']}>
+          <View style={styles.controls}>
             <TouchableOpacity
-              style={styles.micButton}
-              onPress={startRecording}
+              style={[
+                styles.sendButton,
+                !description.trim() && styles.sendButtonDisabled,
+              ]}
+              onPress={handleSend}
+              disabled={!description.trim()}
               activeOpacity={0.8}
             >
-              <Text style={styles.micIcon}>{'🎙'}</Text>
+              <Text style={styles.sendText}>Analisar</Text>
+              <Text style={styles.sendArrow}>{'→'}</Text>
             </TouchableOpacity>
-          )}
-
-          {state === 'recording' && (
-            <View style={styles.recordingControls}>
-              <TouchableOpacity
-                style={styles.stopButton}
-                onPress={stopRecording}
-                activeOpacity={0.8}
-              >
-                <View style={styles.stopSquare} />
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {state === 'done' && (
-            <View style={styles.doneControls}>
-              <TouchableOpacity
-                style={styles.resetButton}
-                onPress={handleReset}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.resetIcon}>{'↻'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.sendButton}
-                onPress={handleSend}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.sendText}>Analisar</Text>
-                <Text style={styles.sendArrow}>{'→'}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </SafeAreaView>
+          </View>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
-
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 const styles = StyleSheet.create({
   container: {
@@ -321,113 +133,76 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#ffffff',
   },
+  content: {
+    flex: 1,
+  },
   centerContent: {
     flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+  },
+  iconBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: 'rgba(190, 242, 100, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingBottom: 40,
+    alignSelf: 'center',
+    marginBottom: 20,
   },
-  ringContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  icon: {
+    fontSize: 28,
   },
-  centerText: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 30,
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginBottom: 8,
   },
-  exampleText: {
+  subtitle: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
-    lineHeight: 22,
+    marginBottom: 24,
   },
-  exampleBold: {
-    color: 'rgba(255,255,255,0.8)',
-    fontWeight: '600',
+  inputContainer: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(190, 242, 100, 0.2)',
+    marginBottom: 20,
   },
-  doneText: {
-    fontSize: 15,
-    color: '#bef264',
-    textAlign: 'center',
-    lineHeight: 22,
-    fontWeight: '500',
-  },
-  timer: {
-    fontSize: 20,
-    fontWeight: '600',
+  input: {
     color: '#ffffff',
-    marginTop: 24,
-    fontVariant: ['tabular-nums'],
+    fontSize: 16,
+    padding: 16,
+    minHeight: 120,
+    lineHeight: 24,
   },
-  hintText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.35)',
-    textAlign: 'center',
-    marginTop: 32,
-    lineHeight: 22,
+  suggestions: {
+    gap: 6,
+  },
+  suggestionsTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.4)',
+    marginBottom: 4,
+  },
+  suggestionItem: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.3)',
+    lineHeight: 20,
   },
   bottomArea: {
     paddingBottom: 16,
   },
   controls: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  micButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#bef264',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  micIcon: {
-    fontSize: 32,
-  },
-  recordingControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 24,
-  },
-  stopButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderWidth: 3,
-    borderColor: '#ef4444',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stopSquare: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    backgroundColor: '#ef4444',
-  },
-  doneControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingHorizontal: 40,
-    width: '100%',
-  },
-  resetButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  resetIcon: {
-    fontSize: 24,
-    color: '#ffffff',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
   },
   sendButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -435,6 +210,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#bef264',
     borderRadius: 14,
     paddingVertical: 16,
+  },
+  sendButtonDisabled: {
+    opacity: 0.3,
   },
   sendText: {
     fontSize: 16,

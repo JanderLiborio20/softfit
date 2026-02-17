@@ -35,16 +35,16 @@ export class MealSchema {
   @Column({ type: 'simple-array' })
   foods: string[];
 
-  @Column({ type: 'int' })
+  @Column({ type: 'float' })
   calories: number;
 
-  @Column({ name: 'macros_carbs', type: 'int' })
+  @Column({ name: 'macros_carbs', type: 'float' })
   macrosCarbs: number;
 
-  @Column({ name: 'macros_protein', type: 'int' })
+  @Column({ name: 'macros_protein', type: 'float' })
   macrosProtein: number;
 
-  @Column({ name: 'macros_fat', type: 'int' })
+  @Column({ name: 'macros_fat', type: 'float' })
   macrosFat: number;
 
   @Column({ name: 'meal_time', type: 'timestamptz' })

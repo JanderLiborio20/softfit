@@ -19,182 +19,122 @@ import { Roles } from '@presentation/decorators/roles.decorator';
 import { UserRole } from '@domain/enums';
 import {
   CreateNutritionistProfileDto,
-  LinkRequestDto,
-  CreateNutritionPlanDto,
-  UpdateClientGoalsDto,
+  RequestLinkToClientDto,
   NutritionistProfileResponseDto,
   LinkResponseDto,
-  NutritionPlanResponseDto,
 } from '@application/dtos/nutritionists';
-import { ProfileResponseDto } from '@application/dtos/profile';
+import { CreateNutritionistProfileUseCase } from '@application/use-cases/nutritionists/create-nutritionist-profile.usecase';
+import { SearchClientByEmailUseCase } from '@application/use-cases/nutritionists/search-client-by-email.usecase';
+import { RequestLinkUseCase } from '@application/use-cases/nutritionists/request-link.usecase';
+import { AcceptLinkUseCase } from '@application/use-cases/nutritionists/accept-link.usecase';
+import { RejectLinkUseCase } from '@application/use-cases/nutritionists/reject-link.usecase';
+import { GetPendingLinksUseCase } from '@application/use-cases/nutritionists/get-pending-links.usecase';
+import { GetMyClientsUseCase } from '@application/use-cases/nutritionists/get-my-clients.usecase';
+import { GetClientDataUseCase } from '@application/use-cases/nutritionists/get-client-data.usecase';
 
-/**
- * Controller de Nutricionistas
- * RF022-RF032 - Gestão de nutricionistas, vínculos e planos alimentares
- */
 @ApiTags('nutritionists')
 @Controller('nutritionists')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class NutritionistsController {
-  constructor() {}
+  constructor(
+    private readonly createProfileUC: CreateNutritionistProfileUseCase,
+    private readonly searchClientUC: SearchClientByEmailUseCase,
+    private readonly requestLinkUC: RequestLinkUseCase,
+    private readonly acceptLinkUC: AcceptLinkUseCase,
+    private readonly rejectLinkUC: RejectLinkUseCase,
+    private readonly getPendingLinksUC: GetPendingLinksUseCase,
+    private readonly getMyClientsUC: GetMyClientsUseCase,
+    private readonly getClientDataUC: GetClientDataUseCase,
+  ) {}
 
   // === Perfil do Nutricionista ===
 
   @Post('profile')
   @Roles(UserRole.NUTRITIONIST)
-  @ApiOperation({ summary: 'Criar perfil profissional de nutricionista (RF002)' })
+  @ApiOperation({ summary: 'Criar perfil profissional de nutricionista' })
   @ApiResponse({ status: 201, type: NutritionistProfileResponseDto })
   async createProfile(
     @CurrentUser() user: JwtPayload,
     @Body() dto: CreateNutritionistProfileDto,
   ): Promise<NutritionistProfileResponseDto> {
-    // TODO: Implementar use case
-    throw new Error('Not implemented');
+    return this.createProfileUC.execute(user.sub, dto);
   }
 
-  @Get('search')
-  @Roles(UserRole.CLIENT)
-  @ApiOperation({ summary: 'Buscar nutricionistas (RF029)' })
-  @ApiResponse({ status: 200, type: [NutritionistProfileResponseDto] })
-  async searchNutritionists(
-    @Query('state') state?: string,
-    @Query('specialty') specialty?: string,
-  ): Promise<NutritionistProfileResponseDto[]> {
-    // TODO: Implementar use case
-    throw new Error('Not implemented');
+  // === Busca de clientes ===
+
+  @Get('search-clients')
+  @Roles(UserRole.NUTRITIONIST)
+  @ApiOperation({ summary: 'Buscar cliente por email' })
+  async searchClientByEmail(
+    @Query('email') email: string,
+  ): Promise<{ userId: string; name: string; email: string } | null> {
+    return this.searchClientUC.execute(email);
   }
 
-  @Get(':id')
-  @Roles(UserRole.CLIENT)
-  @ApiOperation({ summary: 'Visualizar perfil de nutricionista' })
-  @ApiResponse({ status: 200, type: NutritionistProfileResponseDto })
-  async getNutritionistProfile(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<NutritionistProfileResponseDto> {
-    // TODO: Implementar use case
-    throw new Error('Not implemented');
-  }
-
-  // === Vínculos Cliente-Nutricionista ===
+  // === Vínculos ===
 
   @Post('link')
-  @Roles(UserRole.CLIENT)
-  @ApiOperation({ summary: 'Solicitar vínculo com nutricionista (RF030)' })
+  @Roles(UserRole.NUTRITIONIST)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Enviar solicitação de vínculo para cliente' })
   @ApiResponse({ status: 201, type: LinkResponseDto })
   async requestLink(
     @CurrentUser() user: JwtPayload,
-    @Body() dto: LinkRequestDto,
+    @Body() dto: RequestLinkToClientDto,
   ): Promise<LinkResponseDto> {
-    // TODO: Implementar use case
-    throw new Error('Not implemented');
+    return this.requestLinkUC.execute(user.sub, dto.clientId);
   }
 
   @Put('link/:id/accept')
-  @Roles(UserRole.NUTRITIONIST)
+  @Roles(UserRole.CLIENT)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Aceitar solicitação de vínculo (RF031)' })
+  @ApiOperation({ summary: 'Aceitar solicitação de vínculo' })
   @ApiResponse({ status: 200, type: LinkResponseDto })
   async acceptLink(
     @CurrentUser() user: JwtPayload,
     @Param('id', ParseUUIDPipe) linkId: string,
   ): Promise<LinkResponseDto> {
-    // TODO: Implementar use case
-    throw new Error('Not implemented');
+    return this.acceptLinkUC.execute(user.sub, linkId);
   }
 
   @Put('link/:id/reject')
-  @Roles(UserRole.NUTRITIONIST)
+  @Roles(UserRole.CLIENT)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Rejeitar solicitação de vínculo (RF031)' })
+  @ApiOperation({ summary: 'Rejeitar solicitação de vínculo' })
   @ApiResponse({ status: 200, type: LinkResponseDto })
   async rejectLink(
     @CurrentUser() user: JwtPayload,
     @Param('id', ParseUUIDPipe) linkId: string,
   ): Promise<LinkResponseDto> {
-    // TODO: Implementar use case
-    throw new Error('Not implemented');
+    return this.rejectLinkUC.execute(user.sub, linkId);
   }
 
-  @Put('link/:id/cancel')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Encerrar vínculo (RF032)' })
-  @ApiResponse({ status: 200, type: LinkResponseDto })
-  async cancelLink(
-    @CurrentUser() user: JwtPayload,
-    @Param('id', ParseUUIDPipe) linkId: string,
-  ): Promise<LinkResponseDto> {
-    // TODO: Implementar use case - verifica role e chama método apropriado
-    throw new Error('Not implemented');
+  // === Solicitações pendentes (cliente) ===
+
+  @Get('my-links/pending')
+  @Roles(UserRole.CLIENT)
+  @ApiOperation({ summary: 'Listar solicitações pendentes do cliente' })
+  async getPendingLinks(@CurrentUser() user: JwtPayload) {
+    return this.getPendingLinksUC.execute(user.sub);
   }
 
   // === Gestão de Clientes pelo Nutricionista ===
 
   @Get('my-clients')
   @Roles(UserRole.NUTRITIONIST)
-  @ApiOperation({ summary: 'Listar meus clientes (RF022, RF023)' })
-  @ApiResponse({ status: 200, type: [ProfileResponseDto] })
-  async getMyClients(@CurrentUser() user: JwtPayload): Promise<ProfileResponseDto[]> {
-    // TODO: Implementar use case
-    throw new Error('Not implemented');
+  @ApiOperation({ summary: 'Listar meus clientes vinculados' })
+  async getMyClients(@CurrentUser() user: JwtPayload) {
+    return this.getMyClientsUC.execute(user.sub);
   }
 
   @Get('clients/:clientId')
   @Roles(UserRole.NUTRITIONIST)
-  @ApiOperation({ summary: 'Visualizar perfil de cliente (RF023)' })
-  @ApiResponse({ status: 200, type: ProfileResponseDto })
-  async getClientProfile(
+  @ApiOperation({ summary: 'Visualizar dados de um cliente vinculado' })
+  async getClientData(
     @CurrentUser() user: JwtPayload,
     @Param('clientId', ParseUUIDPipe) clientId: string,
-  ): Promise<ProfileResponseDto> {
-    // TODO: Implementar use case - verificar vínculo ativo
-    throw new Error('Not implemented');
-  }
-
-  @Put('clients/:clientId/goals')
-  @Roles(UserRole.NUTRITIONIST)
-  @ApiOperation({ summary: 'Ajustar metas do cliente (RF026, RN005)' })
-  @ApiResponse({ status: 200, type: ProfileResponseDto })
-  async updateClientGoals(
-    @CurrentUser() user: JwtPayload,
-    @Param('clientId', ParseUUIDPipe) clientId: string,
-    @Body() dto: UpdateClientGoalsDto,
-  ): Promise<ProfileResponseDto> {
-    // TODO: Implementar use case - verificar vínculo ativo
-    throw new Error('Not implemented');
-  }
-
-  // === Planos Alimentares ===
-
-  @Post('nutrition-plans')
-  @Roles(UserRole.NUTRITIONIST)
-  @ApiOperation({ summary: 'Criar plano alimentar (RF024)' })
-  @ApiResponse({ status: 201, type: NutritionPlanResponseDto })
-  async createNutritionPlan(
-    @CurrentUser() user: JwtPayload,
-    @Body() dto: CreateNutritionPlanDto,
-  ): Promise<NutritionPlanResponseDto> {
-    // TODO: Implementar use case - verificar vínculo ativo
-    throw new Error('Not implemented');
-  }
-
-  @Get('nutrition-plans/my-plans')
-  @Roles(UserRole.CLIENT)
-  @ApiOperation({ summary: 'Listar meus planos alimentares' })
-  @ApiResponse({ status: 200, type: [NutritionPlanResponseDto] })
-  async getMyNutritionPlans(@CurrentUser() user: JwtPayload): Promise<NutritionPlanResponseDto[]> {
-    // TODO: Implementar use case
-    throw new Error('Not implemented');
-  }
-
-  @Get('nutrition-plans/:id')
-  @ApiOperation({ summary: 'Visualizar plano alimentar' })
-  @ApiResponse({ status: 200, type: NutritionPlanResponseDto })
-  async getNutritionPlan(
-    @CurrentUser() user: JwtPayload,
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<NutritionPlanResponseDto> {
-    // TODO: Implementar use case - verificar permissão (cliente ou nutricionista do plano)
-    throw new Error('Not implemented');
+  ) {
+    return this.getClientDataUC.execute(user.sub, clientId);
   }
 }

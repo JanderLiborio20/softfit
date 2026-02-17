@@ -29,6 +29,7 @@ import {
 import { ListMealsUseCase } from '@application/use-cases/meals/list-meals.usecase';
 import { ConfirmMealUseCase } from '@application/use-cases/meals/confirm-meal.usecase';
 import { ProcessMealPhotoUseCase } from '@application/use-cases/meals/process-meal-photo.usecase';
+import { ProcessMealDescriptionUseCase } from '@application/use-cases/meals/process-meal-description.usecase';
 
 @ApiTags('meals')
 @Controller('meals')
@@ -40,6 +41,7 @@ export class MealsController {
     private readonly listMealsUseCase: ListMealsUseCase,
     private readonly confirmMealUseCase: ConfirmMealUseCase,
     private readonly processMealPhotoUseCase: ProcessMealPhotoUseCase,
+    private readonly processMealDescriptionUseCase: ProcessMealDescriptionUseCase,
   ) {}
 
   @Post('photo')
@@ -54,17 +56,14 @@ export class MealsController {
     return this.processMealPhotoUseCase.execute(photo);
   }
 
-  @Post('audio')
-  @UseInterceptors(FileInterceptor('audio'))
-  @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Registrar refeição por áudio (RF010, RF011)' })
+  @Post('describe')
+  @ApiOperation({ summary: 'Registrar refeição por descrição textual' })
   @ApiResponse({ status: 201, type: AIProcessingResponseDto })
-  async uploadAudio(
+  async describeMeal(
     @CurrentUser() user: JwtPayload,
-    @UploadedFile() audio: Express.Multer.File,
+    @Body('description') description: string,
   ): Promise<AIProcessingResponseDto> {
-    // TODO: Implementar processamento por IA
-    throw new Error('Not implemented');
+    return this.processMealDescriptionUseCase.execute(description);
   }
 
   @Post('confirm')

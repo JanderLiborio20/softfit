@@ -127,14 +127,17 @@ export default function MealResultScreen({ navigation, route }: Props) {
                   protein: result.protein,
                   carbs: result.carbs,
                   fat: result.fat,
-                  items: result.foods.map((food) => ({
-                    name: food,
-                    amount: '',
-                    kcal: 0,
-                    protein: 0,
-                    carbs: 0,
-                    fat: 0,
-                  })),
+                  items: result.foods.map((food) => {
+                    const count = result.foods.length || 1;
+                    return {
+                      name: food,
+                      amount: '',
+                      kcal: Math.round(result.totalKcal / count),
+                      protein: Math.round(result.protein / count),
+                      carbs: Math.round(result.carbs / count),
+                      fat: Math.round(result.fat / count),
+                    };
+                  }),
                   photoUri,
                 },
               })

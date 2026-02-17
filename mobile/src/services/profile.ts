@@ -40,3 +40,19 @@ export async function completeOnboarding(
     body: JSON.stringify(data),
   });
 }
+
+export type UpdateProfilePayload = {
+  dateOfBirth?: string;
+  gender?: string;
+  heightCm?: number;
+  weightKg?: number;
+};
+
+export async function updateProfile(
+  data: UpdateProfilePayload,
+): Promise<ProfileResponse> {
+  return apiFetch<ProfileResponse>('/profile', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
