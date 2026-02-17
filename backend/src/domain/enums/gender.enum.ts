@@ -1,0 +1,10 @@
+/**
+ * Gênero do usuário
+ * Usado para cálculos de TMB (fórmulas diferentes por gênero)
+ */
+export enum Gender {
+  MALE = 'male',
+  FEMALE = 'female',
+  OTHER = 'other',
+  PREFER_NOT_TO_SAY = 'prefer_not_to_say',
+}
