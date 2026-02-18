@@ -29,6 +29,12 @@ import SearchClientScreen from './src/screens/nutritionist/SearchClientScreen';
 import ClientDetailScreen from './src/screens/nutritionist/ClientDetailScreen';
 import PendingRequestsScreen from './src/screens/PendingRequestsScreen';
 import NutritionistRegisterScreen from './src/screens/nutritionist/NutritionistRegisterScreen';
+import HydrationScreen from './src/screens/hydration/HydrationScreen';
+import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
+import MealPlanCreateScreen from './src/screens/nutritionist/MealPlanCreateScreen';
+import MealPlanDetailScreen from './src/screens/nutritionist/MealPlanDetailScreen';
+import MealPlanViewScreen from './src/screens/MealPlanViewScreen';
+import SuggestedRecipesScreen from './src/screens/SuggestedRecipesScreen';
 
 export type OnboardingData = {
   goal?: string;
@@ -95,6 +101,12 @@ export type RootStackParamList = {
   ClientDetail: { clientId: string; clientName: string };
   PendingRequests: undefined;
   NutritionistRegister: undefined;
+  Hydration: undefined;
+  ChangePassword: undefined;
+  MealPlanCreate: { clientId: string; clientName: string };
+  MealPlanDetail: { planId: string };
+  MealPlanView: undefined;
+  SuggestedRecipes: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -164,6 +176,12 @@ export default function App() {
             <Stack.Screen name="ClientDetail" component={ClientDetailScreen} />
             <Stack.Screen name="PendingRequests" component={PendingRequestsScreen} />
             <Stack.Screen name="NutritionistRegister" component={NutritionistRegisterScreen} />
+            <Stack.Screen name="Hydration" component={HydrationScreen} />
+            <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+            <Stack.Screen name="MealPlanCreate" component={MealPlanCreateScreen} />
+            <Stack.Screen name="MealPlanDetail" component={MealPlanDetailScreen} />
+            <Stack.Screen name="MealPlanView" component={MealPlanViewScreen} />
+            <Stack.Screen name="SuggestedRecipes" component={SuggestedRecipesScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

@@ -20,7 +20,9 @@ import { UserRole } from '@domain/enums';
 import {
   CreateNutritionistProfileDto,
   RequestLinkToClientDto,
+  CreateNutritionPlanDto,
   NutritionistProfileResponseDto,
+  NutritionPlanResponseDto,
   LinkResponseDto,
 } from '@application/dtos/nutritionists';
 import { CreateNutritionistProfileUseCase } from '@application/use-cases/nutritionists/create-nutritionist-profile.usecase';
@@ -31,6 +33,10 @@ import { RejectLinkUseCase } from '@application/use-cases/nutritionists/reject-l
 import { GetPendingLinksUseCase } from '@application/use-cases/nutritionists/get-pending-links.usecase';
 import { GetMyClientsUseCase } from '@application/use-cases/nutritionists/get-my-clients.usecase';
 import { GetClientDataUseCase } from '@application/use-cases/nutritionists/get-client-data.usecase';
+import { CreateNutritionPlanUseCase } from '@application/use-cases/nutrition-plans/create-nutrition-plan.usecase';
+import { ListNutritionPlansUseCase } from '@application/use-cases/nutrition-plans/list-nutrition-plans.usecase';
+import { GetNutritionPlanUseCase } from '@application/use-cases/nutrition-plans/get-nutrition-plan.usecase';
+import { DeactivateNutritionPlanUseCase } from '@application/use-cases/nutrition-plans/deactivate-nutrition-plan.usecase';
 
 @ApiTags('nutritionists')
 @Controller('nutritionists')
@@ -46,6 +52,10 @@ export class NutritionistsController {
     private readonly getPendingLinksUC: GetPendingLinksUseCase,
     private readonly getMyClientsUC: GetMyClientsUseCase,
     private readonly getClientDataUC: GetClientDataUseCase,
+    private readonly createPlanUC: CreateNutritionPlanUseCase,
+    private readonly listPlansUC: ListNutritionPlansUseCase,
+    private readonly getPlanUC: GetNutritionPlanUseCase,
+    private readonly deactivatePlanUC: DeactivateNutritionPlanUseCase,
   ) {}
 
   // === Perfil do Nutricionista ===
@@ -136,5 +146,65 @@ export class NutritionistsController {
     @Param('clientId', ParseUUIDPipe) clientId: string,
   ) {
     return this.getClientDataUC.execute(user.sub, clientId);
+  }
+
+  // === Planos Alimentares ===
+
+  @Post('nutrition-plans')
+  @Roles(UserRole.NUTRITIONIST)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Criar plano alimentar para um cliente' })
+  @ApiResponse({ status: 201, type: NutritionPlanResponseDto })
+  async createNutritionPlan(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreateNutritionPlanDto,
+  ): Promise<NutritionPlanResponseDto> {
+    return this.createPlanUC.execute(user.sub, dto);
+  }
+
+  @Get('nutrition-plans/client/:clientId')
+  @Roles(UserRole.NUTRITIONIST)
+  @ApiOperation({ summary: 'Listar planos alimentares de um cliente' })
+  @ApiResponse({ status: 200, type: [NutritionPlanResponseDto] })
+  async listClientPlans(
+    @CurrentUser() user: JwtPayload,
+    @Param('clientId', ParseUUIDPipe) clientId: string,
+  ): Promise<NutritionPlanResponseDto[]> {
+    return this.listPlansUC.executeForNutritionist(user.sub, clientId);
+  }
+
+  @Get('nutrition-plans/:id')
+  @Roles(UserRole.NUTRITIONIST)
+  @ApiOperation({ summary: 'Visualizar detalhes de um plano alimentar' })
+  @ApiResponse({ status: 200, type: NutritionPlanResponseDto })
+  async getNutritionPlan(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) planId: string,
+  ): Promise<NutritionPlanResponseDto> {
+    return this.getPlanUC.execute(user.sub, planId);
+  }
+
+  @Put('nutrition-plans/:id/deactivate')
+  @Roles(UserRole.NUTRITIONIST)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Desativar plano alimentar' })
+  @ApiResponse({ status: 200, type: NutritionPlanResponseDto })
+  async deactivateNutritionPlan(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) planId: string,
+  ): Promise<NutritionPlanResponseDto> {
+    return this.deactivatePlanUC.execute(user.sub, planId);
+  }
+
+  // === Plano ativo do Cliente ===
+
+  @Get('my-plan')
+  @Roles(UserRole.CLIENT)
+  @ApiOperation({ summary: 'Ver meu plano alimentar ativo' })
+  @ApiResponse({ status: 200, type: NutritionPlanResponseDto })
+  async getMyActivePlan(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<NutritionPlanResponseDto | null> {
+    return this.listPlansUC.executeForClient(user.sub);
   }
 }

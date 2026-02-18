@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthController } from '@presentation/controllers/auth.controller';
 import { RegisterUserUseCase } from '@application/use-cases/auth/register-user.usecase';
 import { LoginUseCase } from '@application/use-cases/auth/login.usecase';
+import { ChangePasswordUseCase } from '@application/use-cases/auth/change-password.usecase';
 import { UserSchema } from '@infrastructure/database/typeorm/entities/user.schema';
 import { TypeORMUserRepository } from '@infrastructure/database/typeorm/repositories/user.repository';
 import { USER_REPOSITORY_TOKEN } from '@application/ports/repositories';
@@ -43,6 +44,7 @@ import { JwtStrategy } from '@infrastructure/auth/jwt.strategy';
     // Use Cases
     RegisterUserUseCase,
     LoginUseCase,
+    ChangePasswordUseCase,
 
     // Repositories (Dependency Injection com interface)
     {

@@ -128,3 +128,78 @@ export async function rejectLink(linkId: string): Promise<LinkResponse> {
     method: 'PUT',
   });
 }
+
+// === Planos Alimentares ===
+
+export type PlannedMeal = {
+  name: string;
+  time: string;
+  foods: string[];
+  portions: string[];
+  observations?: string;
+};
+
+export type NutritionPlanResponse = {
+  id: string;
+  nutritionistId: string;
+  clientId: string;
+  title: string;
+  description: string | null;
+  plannedMeals: PlannedMeal[];
+  generalGuidelines: string | null;
+  durationDays: number | null;
+  startDate: string;
+  endDate: string | null;
+  isActive: boolean;
+  daysRemaining: number | null;
+  isExpired: boolean;
+  createdAt: string;
+};
+
+export type CreateNutritionPlanInput = {
+  clientId: string;
+  title: string;
+  description?: string;
+  plannedMeals: PlannedMeal[];
+  generalGuidelines?: string;
+  durationDays?: number;
+  startDate?: string;
+};
+
+export async function createNutritionPlan(
+  data: CreateNutritionPlanInput,
+): Promise<NutritionPlanResponse> {
+  return apiFetch<NutritionPlanResponse>('/nutritionists/nutrition-plans', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getClientNutritionPlans(
+  clientId: string,
+): Promise<NutritionPlanResponse[]> {
+  return apiFetch<NutritionPlanResponse[]>(
+    `/nutritionists/nutrition-plans/client/${clientId}`,
+  );
+}
+
+export async function getNutritionPlan(
+  planId: string,
+): Promise<NutritionPlanResponse> {
+  return apiFetch<NutritionPlanResponse>(
+    `/nutritionists/nutrition-plans/${planId}`,
+  );
+}
+
+export async function deactivateNutritionPlan(
+  planId: string,
+): Promise<NutritionPlanResponse> {
+  return apiFetch<NutritionPlanResponse>(
+    `/nutritionists/nutrition-plans/${planId}/deactivate`,
+    { method: 'PUT' },
+  );
+}
+
+export async function getMyActivePlan(): Promise<NutritionPlanResponse | null> {
+  return apiFetch<NutritionPlanResponse | null>('/nutritionists/my-plan');
+}

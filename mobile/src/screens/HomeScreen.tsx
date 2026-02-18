@@ -17,9 +17,12 @@ import MealCard from '../components/MealCard';
 import { useAuth } from '../contexts/AuthContext';
 import { getProfile } from '../services/profile';
 import { getMealsByDate } from '../services/meals';
-import { getPendingLinks } from '../services/nutritionist';
+import { getPendingLinks, getMyActivePlan } from '../services/nutritionist';
+import { getHydrationByDate } from '../services/hydration';
 import type { ProfileResponse } from '../services/profile';
 import type { MealListResponse } from '../services/meals';
+import type { HydrationDailyResponse } from '../services/hydration';
+import type { NutritionPlanResponse } from '../services/nutritionist';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -75,6 +78,8 @@ export default function HomeScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [hydrationData, setHydrationData] = useState<HydrationDailyResponse | null>(null);
+  const [activePlan, setActivePlan] = useState<NutritionPlanResponse | null>(null);
 
   const goals = profile
     ? {
@@ -97,14 +102,18 @@ export default function HomeScreen({ navigation }: Props) {
   const loadData = useCallback(async (date: Date) => {
     setLoading(true);
     try {
-      const [profileRes, mealsRes, pending] = await Promise.all([
+      const [profileRes, mealsRes, pending, hydrationRes, planRes] = await Promise.all([
         getProfile().catch(() => null),
         getMealsByDate(toDateString(date)),
         getPendingLinks().catch(() => []),
+        getHydrationByDate(toDateString(date)).catch(() => null),
+        getMyActivePlan().catch(() => null),
       ]);
       if (profileRes) setProfile(profileRes);
       setMealsData(mealsRes);
       setPendingCount(pending.length);
+      setHydrationData(hydrationRes);
+      setActivePlan(planRes);
     } catch {
       // silently fail, show defaults
     } finally {
@@ -225,6 +234,87 @@ export default function HomeScreen({ navigation }: Props) {
                 </Text>
                 <Text style={styles.macroSummaryLabel}>Gorduras</Text>
               </View>
+            </View>
+
+            {/* Hydration card */}
+            <View style={styles.hydrationWrapper}>
+              <TouchableOpacity
+                style={styles.hydrationCard}
+                onPress={() => navigation.navigate('Hydration')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.hydrationLeft}>
+                  <Text style={styles.hydrationIcon}>💧</Text>
+                  <View>
+                    <Text style={styles.hydrationTitle}>Hidratação</Text>
+                    <Text style={styles.hydrationSubtitle}>
+                      {hydrationData ? `${hydrationData.totalVolumeMl}ml de ${hydrationData.dailyGoalMl}ml` : '0ml de 2000ml'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.hydrationRight}>
+                  <View style={styles.hydrationBarBg}>
+                    <View
+                      style={[
+                        styles.hydrationBarFill,
+                        { width: `${Math.min(hydrationData?.progressPercent || 0, 100)}%` },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.hydrationPercent}>
+                    {Math.round(hydrationData?.progressPercent || 0)}%
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Meal Plan card */}
+            {activePlan && (
+              <View style={styles.mealPlanWrapper}>
+                <TouchableOpacity
+                  style={styles.mealPlanCard}
+                  onPress={() => navigation.navigate('MealPlanView')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.mealPlanLeft}>
+                    <Text style={styles.mealPlanIcon}>{'📋'}</Text>
+                    <View>
+                      <Text style={styles.mealPlanTitle}>Plano Alimentar</Text>
+                      <Text style={styles.mealPlanSubtitle} numberOfLines={1}>
+                        {activePlan.title}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.mealPlanRight}>
+                    <View style={styles.mealPlanBadge}>
+                      <Text style={styles.mealPlanBadgeText}>Ativo</Text>
+                    </View>
+                    {activePlan.daysRemaining != null && activePlan.daysRemaining > 0 && (
+                      <Text style={styles.mealPlanDays}>{activePlan.daysRemaining}d</Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* AI Recipe Suggestions card */}
+            <View style={styles.recipesWrapper}>
+              <TouchableOpacity
+                style={styles.recipesCard}
+                onPress={() => navigation.navigate('SuggestedRecipes')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.recipesLeft}>
+                  <Text style={styles.recipesIcon}>{'✨'}</Text>
+                  <View>
+                    <Text style={styles.recipesTitle}>Sugestoes de Receitas</Text>
+                    <Text style={styles.recipesSubtitle}>
+                      {Math.max(0, goals.calories - totals.kcal)} kcal restantes
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.recipesArrow}>{'›'}</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Meals section */}
@@ -477,16 +567,160 @@ const styles = StyleSheet.create({
     color: '#71717a',
     marginTop: 2,
   },
+  hydrationWrapper: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  hydrationCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#eff6ff',
+    borderRadius: 16,
+    padding: 16,
+  },
+  hydrationLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  hydrationIcon: {
+    fontSize: 28,
+  },
+  hydrationTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#18181b',
+  },
+  hydrationSubtitle: {
+    fontSize: 12,
+    color: '#71717a',
+    marginTop: 2,
+  },
+  hydrationRight: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  hydrationBarBg: {
+    width: 80,
+    height: 6,
+    backgroundColor: '#dbeafe',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  hydrationBarFill: {
+    height: 6,
+    backgroundColor: '#3b82f6',
+    borderRadius: 3,
+  },
+  hydrationPercent: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#3b82f6',
+  },
+  mealPlanWrapper: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  mealPlanCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#f0fdf4',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  mealPlanLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  mealPlanIcon: {
+    fontSize: 28,
+  },
+  mealPlanTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#18181b',
+  },
+  mealPlanSubtitle: {
+    fontSize: 12,
+    color: '#71717a',
+    marginTop: 2,
+  },
+  mealPlanRight: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  mealPlanBadge: {
+    backgroundColor: '#22c55e',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  mealPlanBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  mealPlanDays: {
+    fontSize: 11,
+    color: '#71717a',
+  },
+  recipesWrapper: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  recipesCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fefce8',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#fef08a',
+  },
+  recipesLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  recipesIcon: {
+    fontSize: 28,
+  },
+  recipesTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#18181b',
+  },
+  recipesSubtitle: {
+    fontSize: 12,
+    color: '#71717a',
+    marginTop: 2,
+  },
+  recipesArrow: {
+    fontSize: 24,
+    color: '#a1a1aa',
+  },
   mealsSection: {
     paddingHorizontal: 20,
     paddingTop: 24,
-    backgroundColor: '#ffffff',
+    paddingBottom: 8,
+    backgroundColor: '#f9fafb',
   },
   mealsTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#18181b',
-    letterSpacing: 1,
+    color: '#71717a',
+    letterSpacing: 1.5,
     marginBottom: 16,
   },
   emptyText: {
@@ -496,7 +730,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   mealsList: {
-    gap: 12,
+    gap: 14,
     marginBottom: 20,
   },
   addMealButtons: {

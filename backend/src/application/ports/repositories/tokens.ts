@@ -8,3 +8,5 @@ export const MEAL_REPOSITORY_TOKEN = 'IMealRepository';
 export const CLIENT_PROFILE_REPOSITORY_TOKEN = 'IClientProfileRepository';
 export const NUTRITIONIST_PROFILE_REPOSITORY_TOKEN = 'INutritionistProfileRepository';
 export const CLIENT_NUTRITIONIST_LINK_REPOSITORY_TOKEN = 'IClientNutritionistLinkRepository';
+export const HYDRATION_REPOSITORY_TOKEN = 'IHydrationRepository';
+export const NUTRITION_PLAN_REPOSITORY_TOKEN = 'INutritionPlanRepository';

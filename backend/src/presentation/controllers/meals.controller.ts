@@ -25,11 +25,13 @@ import {
   MealResponseDto,
   MealListResponseDto,
   AIProcessingResponseDto,
+  RecipeSuggestionsResponseDto,
 } from '@application/dtos/meals';
 import { ListMealsUseCase } from '@application/use-cases/meals/list-meals.usecase';
 import { ConfirmMealUseCase } from '@application/use-cases/meals/confirm-meal.usecase';
 import { ProcessMealPhotoUseCase } from '@application/use-cases/meals/process-meal-photo.usecase';
 import { ProcessMealDescriptionUseCase } from '@application/use-cases/meals/process-meal-description.usecase';
+import { SuggestRecipesUseCase } from '@application/use-cases/meals/suggest-recipes.usecase';
 
 @ApiTags('meals')
 @Controller('meals')
@@ -42,6 +44,7 @@ export class MealsController {
     private readonly confirmMealUseCase: ConfirmMealUseCase,
     private readonly processMealPhotoUseCase: ProcessMealPhotoUseCase,
     private readonly processMealDescriptionUseCase: ProcessMealDescriptionUseCase,
+    private readonly suggestRecipesUseCase: SuggestRecipesUseCase,
   ) {}
 
   @Post('photo')
@@ -64,6 +67,15 @@ export class MealsController {
     @Body('description') description: string,
   ): Promise<AIProcessingResponseDto> {
     return this.processMealDescriptionUseCase.execute(description);
+  }
+
+  @Post('suggest-recipes')
+  @ApiOperation({ summary: 'Sugerir receitas com base nos macros restantes do dia' })
+  @ApiResponse({ status: 201, type: RecipeSuggestionsResponseDto })
+  async suggestRecipes(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<RecipeSuggestionsResponseDto> {
+    return this.suggestRecipesUseCase.execute(user.sub);
   }
 
   @Post('confirm')

@@ -4,6 +4,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import {
   IAIService,
   FoodAnalysisResult,
+  RecipeSuggestion,
 } from '@application/ports/services/ai.service.interface';
 import { Macros } from '@domain/value-objects';
 
@@ -68,6 +69,13 @@ export class GeminiAIService implements IAIService {
 
   async analyzeFoodAudio(audioUrl: string): Promise<FoodAnalysisResult> {
     throw new Error('Audio analysis not implemented yet');
+  }
+
+  async suggestRecipes(
+    _remainingCalories: number,
+    _remainingMacros: { carbs: number; protein: number; fat: number },
+  ): Promise<RecipeSuggestion[]> {
+    throw new Error('Recipe suggestion not implemented for Gemini provider');
   }
 
   async analyzeFoodDescription(

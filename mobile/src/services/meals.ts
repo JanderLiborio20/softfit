@@ -97,3 +97,38 @@ export async function confirmMeal(data: {
     body: JSON.stringify(data),
   });
 }
+
+export type RecipeIngredient = {
+  name: string;
+  amount: string;
+};
+
+export type RecipeSuggestion = {
+  name: string;
+  description: string;
+  ingredients: RecipeIngredient[];
+  preparationSteps: string[];
+  estimatedCalories: number;
+  estimatedMacros: {
+    carbs: number;
+    protein: number;
+    fat: number;
+  };
+  prepTimeMinutes: number;
+};
+
+export type RecipeSuggestionsResponse = {
+  recipes: RecipeSuggestion[];
+  remainingMacros: {
+    remainingCalories: number;
+    remainingCarbs: number;
+    remainingProtein: number;
+    remainingFat: number;
+  };
+};
+
+export async function getSuggestedRecipes(): Promise<RecipeSuggestionsResponse> {
+  return apiFetch<RecipeSuggestionsResponse>('/meals/suggest-recipes', {
+    method: 'POST',
+  });
+}

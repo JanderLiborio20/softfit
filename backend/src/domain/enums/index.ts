@@ -5,3 +5,4 @@ export * from './user-role.enum';
 export * from './workout-type.enum';
 export * from './muscle-group.enum';
 export * from './link-status.enum';
+export * from './drink-type.enum';

@@ -9,6 +9,7 @@ import { ProfileModule } from './modules/profile/profile.module';
 import { WorkoutsModule } from './modules/workouts/workouts.module';
 import { NutritionistsModule } from './modules/nutritionists/nutritionists.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { HydrationModule } from './modules/hydration/hydration.module';
 import { JwtAuthGuard } from '@presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '@presentation/guards/roles.guard';
 
@@ -52,6 +53,7 @@ import { RolesGuard } from '@presentation/guards/roles.guard';
     WorkoutsModule,
     NutritionistsModule,
     DashboardModule,
+    HydrationModule,
   ],
   providers: [
     // Guards globais

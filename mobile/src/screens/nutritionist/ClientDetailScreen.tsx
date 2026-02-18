@@ -12,8 +12,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../../App';
-import { getClientData } from '../../services/nutritionist';
-import type { ClientData } from '../../services/nutritionist';
+import { getClientData, getClientNutritionPlans } from '../../services/nutritionist';
+import type { ClientData, NutritionPlanResponse } from '../../services/nutritionist';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ClientDetail'>;
@@ -50,6 +50,7 @@ function formatMealTime(mealTimeStr: string): string {
 export default function ClientDetailScreen({ navigation, route }: Props) {
   const { clientId, clientName } = route.params;
   const [data, setData] = useState<ClientData | null>(null);
+  const [plans, setPlans] = useState<NutritionPlanResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,14 +58,22 @@ export default function ClientDetailScreen({ navigation, route }: Props) {
     useCallback(() => {
       setLoading(true);
       setError(null);
-      getClientData(clientId)
-        .then(setData)
+      Promise.all([
+        getClientData(clientId),
+        getClientNutritionPlans(clientId).catch(() => []),
+      ])
+        .then(([clientData, plansData]) => {
+          setData(clientData);
+          setPlans(plansData);
+        })
         .catch((err) => {
           setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
         })
         .finally(() => setLoading(false));
     }, [clientId]),
   );
+
+  const activePlan = plans.find((p) => p.isActive && !p.isExpired);
 
   const profile = data?.profile;
   const meals = data?.meals || [];
@@ -157,6 +166,42 @@ export default function ClientDetailScreen({ navigation, route }: Props) {
                 )}
               </>
             )}
+
+            {/* Meal Plan section */}
+            <Text style={[styles.sectionTitle, { marginTop: 28 }]}>PLANO ALIMENTAR</Text>
+
+            {activePlan ? (
+              <TouchableOpacity
+                style={styles.planCard}
+                onPress={() => navigation.navigate('MealPlanDetail', { planId: activePlan.id })}
+                activeOpacity={0.7}
+              >
+                <View style={styles.planCardHeader}>
+                  <View style={styles.planActiveBadge}>
+                    <Text style={styles.planActiveBadgeText}>Ativo</Text>
+                  </View>
+                  {activePlan.daysRemaining != null && activePlan.daysRemaining > 0 && (
+                    <Text style={styles.planDaysText}>{activePlan.daysRemaining}d restantes</Text>
+                  )}
+                </View>
+                <Text style={styles.planCardTitle}>{activePlan.title}</Text>
+                <Text style={styles.planCardMeals}>
+                  {activePlan.plannedMeals.length} refeicoes planejadas
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.emptyText}>Nenhum plano ativo.</Text>
+            )}
+
+            <TouchableOpacity
+              style={styles.createPlanButton}
+              onPress={() => navigation.navigate('MealPlanCreate', { clientId, clientName })}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.createPlanButtonText}>
+                {activePlan ? 'Criar Novo Plano' : 'Criar Plano Alimentar'}
+              </Text>
+            </TouchableOpacity>
 
             {/* Today's meals */}
             <Text style={[styles.sectionTitle, { marginTop: 28 }]}>REFEICOES DE HOJE</Text>
@@ -407,5 +452,56 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#52525b',
     fontWeight: '500',
+  },
+  planCard: {
+    backgroundColor: '#f0fdf4',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    marginBottom: 12,
+  },
+  planCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  planActiveBadge: {
+    backgroundColor: '#22c55e',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  planActiveBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  planDaysText: {
+    fontSize: 12,
+    color: '#71717a',
+  },
+  planCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#18181b',
+  },
+  planCardMeals: {
+    fontSize: 13,
+    color: '#71717a',
+    marginTop: 4,
+  },
+  createPlanButton: {
+    backgroundColor: '#22c55e',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  createPlanButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

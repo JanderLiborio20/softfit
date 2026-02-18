@@ -12,6 +12,31 @@ export interface FoodAnalysisResult {
 }
 
 /**
+ * Ingrediente de uma receita sugerida
+ */
+export interface RecipeIngredient {
+  name: string;
+  amount: string;
+}
+
+/**
+ * Receita sugerida pela IA
+ */
+export interface RecipeSuggestion {
+  name: string;
+  description: string;
+  ingredients: RecipeIngredient[];
+  preparationSteps: string[];
+  estimatedCalories: number;
+  estimatedMacros: {
+    carbs: number;
+    protein: number;
+    fat: number;
+  };
+  prepTimeMinutes: number;
+}
+
+/**
  * Port (Interface) do Serviço de IA
  * Define contrato para processamento de imagens e áudio com IA
  */
@@ -44,4 +69,15 @@ export interface IAIService {
    * @returns Análise nutricional dos alimentos descritos
    */
   analyzeFoodDescription(description: string): Promise<FoodAnalysisResult>;
+
+  /**
+   * Sugere receitas baseadas nos macros restantes do dia
+   * @param remainingCalories Calorias restantes
+   * @param remainingMacros Macros restantes (carbs, protein, fat em gramas)
+   * @returns Array de receitas sugeridas
+   */
+  suggestRecipes(
+    remainingCalories: number,
+    remainingMacros: { carbs: number; protein: number; fat: number },
+  ): Promise<RecipeSuggestion[]>;
 }

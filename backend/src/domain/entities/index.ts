@@ -6,3 +6,4 @@ export * from './workout.entity';
 export * from './exercise.entity';
 export * from './client-nutritionist-link.entity';
 export * from './nutrition-plan.entity';
+export * from './hydration.entity';

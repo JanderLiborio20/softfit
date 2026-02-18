@@ -3,3 +3,4 @@ export * from './create-meal-audio.dto';
 export * from './confirm-meal.dto';
 export * from './update-meal.dto';
 export * from './meal-response.dto';
+export * from './recipe-suggestion.dto';

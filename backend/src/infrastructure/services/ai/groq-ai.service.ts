@@ -4,6 +4,7 @@ import OpenAI from 'openai';
 import {
   IAIService,
   FoodAnalysisResult,
+  RecipeSuggestion,
 } from '@application/ports/services/ai.service.interface';
 import { Macros } from '@domain/value-objects';
 
@@ -112,6 +113,38 @@ export class GroqAIService implements IAIService {
     } catch (error) {
       this.logger.error('Error analyzing food description', error);
       throw new Error('Failed to analyze food description with AI');
+    }
+  }
+
+  async suggestRecipes(
+    remainingCalories: number,
+    remainingMacros: { carbs: number; protein: number; fat: number },
+  ): Promise<RecipeSuggestion[]> {
+    this.logger.debug(
+      `Suggesting recipes for remaining: ${remainingCalories}kcal, P:${remainingMacros.protein}g C:${remainingMacros.carbs}g F:${remainingMacros.fat}g`,
+    );
+
+    try {
+      const response = await this.client.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 3000,
+        messages: [
+          {
+            role: 'user',
+            content: this.getRecipeSuggestionPrompt(
+              remainingCalories,
+              remainingMacros,
+            ),
+          },
+        ],
+      });
+
+      return this.parseRecipesResponse(
+        response.choices[0].message.content || '',
+      );
+    } catch (error) {
+      this.logger.error('Error suggesting recipes', error);
+      throw new Error('Failed to suggest recipes with AI');
     }
   }
 
@@ -231,5 +264,97 @@ REGRAS IMPORTANTES:
     if (hour >= 15 && hour < 18) return 'Lanche da Tarde';
     if (hour >= 18 && hour < 22) return 'Jantar';
     return 'Ceia';
+  }
+
+  private getRecipeSuggestionPrompt(
+    remainingCalories: number,
+    remainingMacros: { carbs: number; protein: number; fat: number },
+  ): string {
+    return `Você é um nutricionista especializado em culinária saudável brasileira.
+
+O usuário ainda tem os seguintes macronutrientes disponíveis para o restante do dia:
+- Calorias restantes: ${remainingCalories} kcal
+- Proteínas restantes: ${remainingMacros.protein}g
+- Carboidratos restantes: ${remainingMacros.carbs}g
+- Gorduras restantes: ${remainingMacros.fat}g
+
+Sugira EXATAMENTE 3 receitas saudáveis que se encaixem bem dentro desses macros disponíveis.
+Retorne APENAS um JSON válido com o seguinte formato:
+
+[
+  {
+    "name": "nome da receita",
+    "description": "breve descrição da receita em 1-2 frases",
+    "ingredients": [
+      { "name": "ingrediente", "amount": "quantidade e unidade" }
+    ],
+    "preparationSteps": [
+      "passo 1",
+      "passo 2"
+    ],
+    "estimatedCalories": número,
+    "estimatedMacros": {
+      "carbs": gramas,
+      "protein": gramas,
+      "fat": gramas
+    },
+    "prepTimeMinutes": número
+  }
+]
+
+REGRAS IMPORTANTES:
+1. Sugira receitas REALISTAS que se encaixem nos macros disponíveis (podem usar uma parte dos macros, mas não ultrapassar o total)
+2. Use ingredientes comuns no Brasil, consultando a tabela TACO
+3. Os passos de preparo devem ser claros e objetivos
+4. O tempo de preparo deve ser realista
+5. Varie os tipos de receita (ex: não sugira 3 opções de frango)
+6. Se os macros restantes forem muito baixos (< 200 kcal), sugira opções leves como lanches ou snacks
+7. Retorne APENAS o JSON array, sem texto adicional, sem markdown, sem explicações`;
+  }
+
+  private parseRecipesResponse(text: string): RecipeSuggestion[] {
+    try {
+      this.logger.debug(`Groq recipes response: ${text}`);
+
+      const cleanJson = text
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
+
+      const parsed = JSON.parse(cleanJson);
+
+      if (!Array.isArray(parsed)) {
+        throw new Error('Response is not an array');
+      }
+
+      return parsed.map((item: any) => {
+        if (
+          !item.name ||
+          !Array.isArray(item.ingredients) ||
+          !Array.isArray(item.preparationSteps)
+        ) {
+          throw new Error('Invalid recipe structure in response');
+        }
+        return {
+          name: item.name,
+          description: item.description || '',
+          ingredients: item.ingredients.map((ing: any) => ({
+            name: ing.name,
+            amount: ing.amount,
+          })),
+          preparationSteps: item.preparationSteps,
+          estimatedCalories: Number(item.estimatedCalories) || 0,
+          estimatedMacros: {
+            carbs: Number(item.estimatedMacros?.carbs) || 0,
+            protein: Number(item.estimatedMacros?.protein) || 0,
+            fat: Number(item.estimatedMacros?.fat) || 0,
+          },
+          prepTimeMinutes: Number(item.prepTimeMinutes) || 30,
+        } as RecipeSuggestion;
+      });
+    } catch (error) {
+      this.logger.error('Error parsing recipes response', error);
+      throw new Error('Failed to parse recipes AI response');
+    }
   }
 }

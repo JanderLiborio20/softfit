@@ -63,6 +63,16 @@ export async function register(
   return user;
 }
 
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  await apiFetch<{ message: string }>('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
 export async function logout(): Promise<void> {
   await removeToken();
   await SecureStore.deleteItemAsync(USER_KEY);
