@@ -62,8 +62,12 @@ export default function CreateAccountScreen({ navigation, route }: Props) {
       // Send onboarding data to backend
       const { data } = route.params;
       if (data.goal && data.gender && data.birthDate && data.height && data.weight && data.activityLevel) {
+        // Convert DD/MM/YYYY to YYYY-MM-DD for the backend
+        const [dd, mm, yyyy] = data.birthDate.split('/');
+        const isoDate = `${yyyy}-${mm}-${dd}`;
+
         await completeOnboarding({
-          dateOfBirth: data.birthDate,
+          dateOfBirth: isoDate,
           gender: data.gender,
           heightCm: parseFloat(data.height),
           weightKg: parseFloat(data.weight),
